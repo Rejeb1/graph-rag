@@ -16,7 +16,7 @@ DATA_DIR = ROOT_DIR / "data" / "documents"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 LARGE_MODEL = "openai/gpt-oss-120b"  # supports strict JSON-schema outputs: extraction, NL->Cypher, judging, complex answers
-SMALL_MODEL = "llama-3.1-8b-instant"  # fast/cheap tier for simple, routine answers
+SMALL_MODEL = "openai/gpt-oss-20b"  # fast/cheap tier for simple, routine answers (llama-3.1-8b-instant was retired by Groq)
 
 # --- Neo4j (knowledge graph) ---
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
