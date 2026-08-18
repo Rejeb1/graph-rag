@@ -1,0 +1,11 @@
+# Install AFTER requirements.txt, with --no-deps:
+#   pip install --no-deps -r requirements-ragas.txt
+#
+# Why: `pip install ragas` normally pulls in scikit-network as a hard
+# dependency (used only by ragas's testset-generation feature, which this
+# project doesn't use). scikit-network has no prebuilt wheel for recent
+# Python versions and fails to build without a C++ compiler. Installing
+# ragas with --no-deps skips that dependency; requirements.txt already
+# lists every other package ragas actually needs at runtime for
+# ragas.evaluate() (verified against this project's usage).
+ragas==0.4.3

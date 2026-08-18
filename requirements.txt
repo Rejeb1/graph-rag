@@ -1,0 +1,44 @@
+# LLM provider — Groq only (free, no card required). See src/config.py.
+groq>=0.13.0
+
+# Knowledge graph
+neo4j>=5.24
+
+# Vector store + embeddings
+qdrant-client>=1.12
+sentence-transformers>=3.2
+
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.32
+
+# Utilities
+python-dotenv>=1.0
+pydantic>=2.9
+
+# --- Ragas (see requirements-ragas.txt) ---
+# `ragas` itself is intentionally NOT listed here. Its normal dependency
+# resolution pulls in `scikit-network`, a hard dependency used only by
+# ragas's (unused, by us) testset-generation feature. scikit-network ships
+# no prebuilt wheel for recent Python versions and needs a C++ compiler to
+# build from source. Install ragas separately with --no-deps; see
+# requirements-ragas.txt for its actually-needed sub-dependencies.
+appdirs
+datasets>=4.0.0
+diskcache>=5.6.3
+instructor
+langchain
+langchain-community
+langchain-core
+langchain_openai
+nest-asyncio
+openai>=1.0.0
+pillow>=10.4.0
+rich
+tiktoken
+tqdm
+typer
+
+# Routes the Ragas evaluator LLM to Groq (see src/evaluation/ragas_eval.py).
+# Only imported by the evaluation/benchmark path, not by the deployed API.
+litellm
