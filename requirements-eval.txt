@@ -1,0 +1,27 @@
+# Local evaluation/benchmark dependencies — NOT installed by the Dockerfile.
+# Install these only where you run scripts/run_benchmark.py:
+#   pip install -r requirements.txt
+#   pip install -r requirements-eval.txt
+#   pip install --no-deps -r requirements-ragas.txt
+#
+# These are ragas's own runtime dependencies (everything except
+# scikit-network — see requirements-ragas.txt for why), listed explicitly so
+# `ragas` can be installed with --no-deps.
+appdirs
+datasets>=4.0.0
+diskcache>=5.6.3
+instructor
+langchain
+langchain-community
+langchain-core
+langchain_openai
+nest-asyncio
+openai>=1.0.0
+pillow>=10.4.0
+rich
+tiktoken
+tqdm
+typer
+
+# Routes the Ragas evaluator LLM to Groq (see src/evaluation/ragas_eval.py).
+litellm

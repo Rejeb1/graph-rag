@@ -25,7 +25,6 @@ RUN chmod -R a+rX /app
 
 EXPOSE 8000
 
-# $PORT is set by Cloud Run / App Runner and defaults to 8000 otherwise.
-# Hugging Face Spaces has no such var — its default port is 7860, pinned to
-# 8000 instead via app_port in README.md to match this default.
+# $PORT is set by the platform (Render defaults to 10000; Cloud Run/App
+# Runner have their own defaults) and falls back to 8000 for local `docker run`.
 CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

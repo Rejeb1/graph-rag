@@ -1,3 +1,19 @@
+# This file is what the Dockerfile installs — keep it slim, production-only.
+# The Ragas/LangChain evaluation stack lives in requirements-eval.txt +
+# requirements-ragas.txt instead: it's only used by scripts/run_benchmark.py,
+# never by the deployed API, and pulling it into the image roughly doubles
+# build time/size for nothing.
+
+# CPU-only PyTorch build. sentence-transformers depends on torch but doesn't
+# pin it, so plain PyPI resolution grabs the full CUDA build (several GB of
+# nvidia-*/cuda-toolkit wheels) even on a CPU-only host like Render's free
+# tier. Pinning torch here, before sentence-transformers, makes pip satisfy
+# sentence-transformers' unpinned "torch" requirement with this CPU wheel
+# instead. (Harmless on Windows dev machines — the CUDA-bundling behavior
+# this works around is Linux-wheel-specific.)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.0
+
 # LLM provider — Groq only (free, no card required). See src/config.py.
 groq>=0.13.0
 
@@ -15,30 +31,3 @@ uvicorn[standard]>=0.32
 # Utilities
 python-dotenv>=1.0
 pydantic>=2.9
-
-# --- Ragas (see requirements-ragas.txt) ---
-# `ragas` itself is intentionally NOT listed here. Its normal dependency
-# resolution pulls in `scikit-network`, a hard dependency used only by
-# ragas's (unused, by us) testset-generation feature. scikit-network ships
-# no prebuilt wheel for recent Python versions and needs a C++ compiler to
-# build from source. Install ragas separately with --no-deps; see
-# requirements-ragas.txt for its actually-needed sub-dependencies.
-appdirs
-datasets>=4.0.0
-diskcache>=5.6.3
-instructor
-langchain
-langchain-community
-langchain-core
-langchain_openai
-nest-asyncio
-openai>=1.0.0
-pillow>=10.4.0
-rich
-tiktoken
-tqdm
-typer
-
-# Routes the Ragas evaluator LLM to Groq (see src/evaluation/ragas_eval.py).
-# Only imported by the evaluation/benchmark path, not by the deployed API.
-litellm
