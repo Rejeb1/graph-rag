@@ -1,11 +1,13 @@
-"""Ragas-based evaluation: faithfulness, answer relevancy, context precision.
+"""Ragas-based evaluation: faithfulness and context precision.
 
-Uses Groq (via litellm, free) as the evaluator LLM and a local
-sentence-transformers model as the evaluator embeddings (via
-ragas.embeddings.HuggingFaceEmbeddings, use_api=False) — nothing here
-requires a paid API key.
+Uses Groq (via litellm, free) as the evaluator LLM. Both metrics are pure
+LLM-judgment metrics — no embeddings needed. (answer_relevancy was dropped:
+it requires both an `embed_query()` method our embeddings wrapper doesn't
+expose and 3 generations per call, which Groq/litellm only returns 1 of —
+neither is a transient issue, it's a real incompatibility with this setup.)
 """
 
+import functools
 import sys
 import types
 
@@ -27,14 +29,14 @@ if "langchain_community.chat_models.vertexai" not in sys.modules:
 import litellm
 from ragas import EvaluationDataset, evaluate
 from ragas.dataset_schema import SingleTurnSample
-from ragas.embeddings import HuggingFaceEmbeddings
 from ragas.llms import llm_factory
+from ragas.run_config import RunConfig
 # NB: this path is deprecated in favor of ragas.metrics.collections (class-based
 # metrics with a different construction contract) but is confirmed working
 # against ragas 0.4.3's evaluate(); re-check on upgrade.
-from ragas.metrics import answer_relevancy, context_precision, faithfulness
+from ragas.metrics import context_precision, faithfulness
 
-from src.config import EMBEDDING_MODEL, LARGE_MODEL
+from src.config import LARGE_MODEL
 
 
 def build_dataset(records: list[dict]) -> EvaluationDataset:
@@ -53,14 +55,21 @@ def build_dataset(records: list[dict]) -> EvaluationDataset:
 
 def run_ragas(records: list[dict]) -> dict:
     dataset = build_dataset(records)
-    # litellm reads GROQ_API_KEY from the environment itself; no client object needed.
-    evaluator_llm = llm_factory(f"groq/{LARGE_MODEL}", provider="litellm", client=litellm.completion)
-    evaluator_embeddings = HuggingFaceEmbeddings(model=EMBEDDING_MODEL, use_api=False)
+    # Ragas decomposes each question into several verification sub-calls,
+    # which can burst past Groq's free-tier tokens-per-minute limit.
+    # num_retries makes litellm wait out the "try again in Xs" window
+    # instead of giving up after one attempt.
+    groq_completion = functools.partial(litellm.completion, num_retries=5)
+    evaluator_llm = llm_factory(f"groq/{LARGE_MODEL}", provider="litellm", client=groq_completion)
 
     result = evaluate(
         dataset=dataset,
-        metrics=[faithfulness, answer_relevancy, context_precision],
+        metrics=[faithfulness, context_precision],
         llm=evaluator_llm,
-        embeddings=evaluator_embeddings,
+        # Ragas defaults to 16 concurrent workers, which bursts well past
+        # Groq's free-tier tokens-per-minute limit before num_retries above
+        # gets a chance to help. Low concurrency keeps token usage spread
+        # out enough to stay under the cap.
+        run_config=RunConfig(max_workers=2),
     )
     return result.to_pandas().mean(numeric_only=True).to_dict()

@@ -97,11 +97,23 @@ def _print_table(results: list[dict]) -> None:
         print(" | ".join(str(r.get(h, "")) for h in headers))
 
 
-def run_benchmark(save_dir: Path | None = None) -> list[dict]:
+def run_benchmark(save_dir: Path | None = None, pause_between_configs: float = 65.0) -> list[dict]:
     save_dir = save_dir or (ROOT_DIR / "runs")
     save_dir.mkdir(exist_ok=True)
     client = Groq(api_key=GROQ_API_KEY)
-    results = [run_config(client, config) for config in CONFIGS]
+
+    results = []
+    for i, config in enumerate(CONFIGS):
+        if i > 0:
+            # Ragas's per-question decomposition into several verification
+            # calls burns through Groq's free-tier tokens-per-minute budget
+            # within one config's run; starting the next config immediately
+            # hits the same still-exhausted window. Waiting out a full
+            # minute between configs gives each one a fresh budget instead
+            # of silently degrading to NaN scores.
+            print(f"Waiting {pause_between_configs:.0f}s for the Groq rate limit window to reset...")
+            time.sleep(pause_between_configs)
+        results.append(run_config(client, config))
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     (save_dir / f"benchmark-{timestamp}.json").write_text(json.dumps(results, indent=2), encoding="utf-8")

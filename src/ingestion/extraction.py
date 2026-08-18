@@ -5,6 +5,7 @@ import json
 from groq import Groq
 
 from src.config import LARGE_MODEL
+from src.llm_retry import call_with_retries
 
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -59,16 +60,20 @@ SYSTEM_PROMPT = (
 
 def extract_graph(client: Groq, text: str) -> dict:
     """Return {"entities": [...], "relations": [...]} extracted from `text`."""
-    response = client.chat.completions.create(
-        model=LARGE_MODEL,
-        max_tokens=4096,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {"name": "graph_extraction", "strict": True, "schema": EXTRACTION_SCHEMA},
-        },
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text},
-        ],
-    )
-    return json.loads(response.choices[0].message.content)
+
+    def _call() -> dict:
+        response = client.chat.completions.create(
+            model=LARGE_MODEL,
+            max_tokens=4096,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "graph_extraction", "strict": True, "schema": EXTRACTION_SCHEMA},
+            },
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": text},
+            ],
+        )
+        return json.loads(response.choices[0].message.content)
+
+    return call_with_retries(_call)

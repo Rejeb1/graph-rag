@@ -5,6 +5,7 @@ import json
 from groq import Groq
 
 from src.config import LARGE_MODEL
+from src.llm_retry import call_with_retries
 
 JUDGE_SCHEMA = {
     "type": "object",
@@ -34,16 +35,19 @@ def judge(client: Groq, question: str, answer: str, context: str, reference: str
         f"System's answer:\n{answer}\n\n"
         f"Reference answer (if available): {reference or '(none provided)'}"
     )
-    response = client.chat.completions.create(
-        model=LARGE_MODEL,
-        max_tokens=512,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {"name": "judge_scores", "strict": True, "schema": JUDGE_SCHEMA},
-        },
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
-    )
-    return json.loads(response.choices[0].message.content)
+    def _call() -> dict:
+        response = client.chat.completions.create(
+            model=LARGE_MODEL,
+            max_tokens=512,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "judge_scores", "strict": True, "schema": JUDGE_SCHEMA},
+            },
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+        )
+        return json.loads(response.choices[0].message.content)
+
+    return call_with_retries(_call)
