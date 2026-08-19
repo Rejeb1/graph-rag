@@ -57,8 +57,15 @@ def add_extraction(extraction: dict, source: str, driver: Driver | None = None) 
             if not name:
                 continue
             label = sanitize_identifier(entity.get("type", "Entity"))
+            # MERGE matches only on the stable identity (:Entity + name) —
+            # the uniqueness constraint is on that pair. Adding the
+            # type-specific label is a separate SET so the same entity
+            # extracted with a different `type` in another chunk (e.g. once
+            # as "Concept", once as "Award") still resolves to one node
+            # instead of violating the constraint trying to MERGE a second
+            # node under a different label combination.
             session.run(
-                f"MERGE (e:Entity:{label} {{name: $name}}) SET e.type = $type",
+                f"MERGE (e:Entity {{name: $name}}) SET e.type = $type SET e:{label}",
                 name=name,
                 type=entity.get("type", "Entity"),
             )

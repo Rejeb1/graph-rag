@@ -28,7 +28,14 @@ def index_chunks(client: QdrantClient, chunks: list[str], source: str) -> None:
     ensure_collection(client)
     vectors = embed(chunks)
     points = [
-        qmodels.PointStruct(id=str(uuid.uuid4()), vector=vector, payload={"text": chunk, "source": source})
-        for chunk, vector in zip(chunks, vectors)
+        # Deterministic ID from (source, position) — re-running build_index.py
+        # on the same documents upserts in place instead of accumulating
+        # duplicate points every run.
+        qmodels.PointStruct(
+            id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source}#{i}")),
+            vector=vector,
+            payload={"text": chunk, "source": source},
+        )
+        for i, (chunk, vector) in enumerate(zip(chunks, vectors))
     ]
     client.upsert(collection_name=QDRANT_COLLECTION, points=points)

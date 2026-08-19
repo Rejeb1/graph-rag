@@ -1,7 +1,10 @@
-"""A tiny evaluation set matched to data/documents/sample.txt.
+"""A small evaluation set matched to data/documents/*.txt (the Curie family).
 
-Extend this (or point it at a larger, versioned file) once the corpus grows
-beyond the bundled sample document.
+The last two questions are deliberately cross-document / multi-hop: their
+answer requires connecting facts that live in separate documents (sample.txt,
+pierre_curie.txt, joliot_curie.txt), which is where graph retrieval should
+meaningfully outperform plain vector similarity search — a top-k chunk
+retrieval can easily miss combining all three.
 """
 
 EVAL_SET = [
@@ -20,5 +23,17 @@ EVAL_SET = [
     {
         "question": "Where did Marie Curie study?",
         "reference": "Marie Curie studied at the University of Paris.",
+    },
+    {
+        "question": "How is Frederic Joliot-Curie related to Marie Curie?",
+        "reference": "He was her son-in-law: he married her daughter, Irene Joliot-Curie, in 1926.",
+    },
+    {
+        "question": "How many Nobel Prizes did the Curie family win in total, and who won them?",
+        "reference": (
+            "Five, across three laureates: Marie Curie (Physics 1903, Chemistry 1911), "
+            "Pierre Curie (Physics 1903, shared with Marie and Henri Becquerel), and "
+            "Irene and Frederic Joliot-Curie (Chemistry 1935, shared)."
+        ),
     },
 ]
