@@ -98,16 +98,17 @@ active day can still hit the daily cap.
 - **No auth on `/ask`** — intentional, this is a public demo meant to be
   tried without a key. A per-IP rate limiter guards the free-tier quotas
   instead (`src/api/rate_limit.py`).
-- **Sample corpus is small** (`data/documents/`, a 3-document Curie-family
-  toy set) — enough to prove the pipeline works end-to-end and to test
-  cross-document multi-hop retrieval, but too easy to show a real
-  quality/cost contrast between configurations in the benchmark. Swap in a
-  larger, domain-relevant corpus for that.
+- **Corpus** (`data/documents/`): 8 original documents (~700 words each)
+  summarizing the Model Context Protocol — architecture, primitives,
+  transports, deprecations, ecosystem — chosen because it's directly
+  relevant to the agentic-RAG space this project itself demonstrates. Large
+  enough per document to exercise multi-chunk splitting (`chunking.py`) and
+  cross-document multi-hop questions in the eval set.
 - **Entity resolution across documents isn't perfect** — the same real-world
   entity can occasionally get extracted under slightly different names in
-  separate LLM calls (e.g. "Frederic Joliot" vs. "Frederic Joliot-Curie").
-  The keyword-seeded graph fallback and vector search both help paper over
-  this, but a dedicated entity-linking step would fix it properly.
+  separate LLM calls. The keyword-seeded graph fallback and vector search
+  both help paper over this, but a dedicated entity-linking step would fix
+  it properly.
 
 ## Tech stack
 
