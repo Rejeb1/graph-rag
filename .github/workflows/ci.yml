@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run unit tests
+        # Live tests need real GROQ_API_KEY/NEO4J_*/QDRANT_* credentials
+        # against a populated instance, which CI doesn't have — they're
+        # skipped by default (see conftest.py's dummy-key fallback and
+        # tests/test_live_pipeline.py's skip condition).
+        run: pytest -v -m "not live"
+
+      - name: Compile-check every source file
+        run: python -m compileall -q src scripts

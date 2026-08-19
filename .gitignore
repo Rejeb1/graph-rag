@@ -6,3 +6,4 @@ venv/
 runs/
 .ragas_cache/
 deploy/cloud-run.env.yaml
+.pytest_cache/

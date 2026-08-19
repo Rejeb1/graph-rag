@@ -1,0 +1,32 @@
+# Render Blueprint — infra-as-code for the deployed API.
+#
+# The live service (graph-rag-kn2i.onrender.com) was created by hand via the
+# dashboard before this file existed; Render doesn't retroactively adopt a
+# blueprint into an existing service. This file makes the config
+# reproducible going forward — either point it at a new Blueprint-managed
+# service, or use it as the documented reference for the dashboard settings
+# already in place. See https://render.com/docs/blueprint-spec.
+services:
+  - name: graph-rag-api
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: graph_rag_chunks
+      - key: ROUTING_THRESHOLD
+        value: "0.5"
