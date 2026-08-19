@@ -97,12 +97,27 @@ def _print_table(results: list[dict]) -> None:
         print(" | ".join(str(r.get(h, "")) for h in headers))
 
 
+def _save(results: list[dict], json_path: Path, csv_path: Path) -> None:
+    json_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+
+    summary_keys = [k for k in results[0] if k != "records"]
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=summary_keys)
+        writer.writeheader()
+        for r in results:
+            writer.writerow({k: r[k] for k in summary_keys})
+
+
 def run_benchmark(save_dir: Path | None = None, pause_between_configs: float = 65.0) -> list[dict]:
     save_dir = save_dir or (ROOT_DIR / "runs")
     save_dir.mkdir(exist_ok=True)
     client = Groq(api_key=GROQ_API_KEY)
 
-    results = []
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    json_path = save_dir / f"benchmark-{timestamp}.json"
+    csv_path = save_dir / f"benchmark-{timestamp}.csv"
+
+    results: list[dict] = []
     for i, config in enumerate(CONFIGS):
         if i > 0:
             # Ragas's per-question decomposition into several verification
@@ -113,20 +128,14 @@ def run_benchmark(save_dir: Path | None = None, pause_between_configs: float = 6
             # of silently degrading to NaN scores.
             print(f"Waiting {pause_between_configs:.0f}s for the Groq rate limit window to reset...")
             time.sleep(pause_between_configs)
+
         results.append(run_config(client, config))
+        # Save after every config, not just at the end. A crash on a later
+        # config (e.g. the daily token cap) previously discarded every
+        # config that had already completed, since nothing hit disk until
+        # the very end.
+        _save(results, json_path, csv_path)
+        print(f"[{i + 1}/{len(CONFIGS)}] saved progress to {json_path}")
 
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    (save_dir / f"benchmark-{timestamp}.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
-
-    summary_keys = [k for k in results[0] if k != "records"]
-    csv_path = save_dir / f"benchmark-{timestamp}.csv"
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=summary_keys)
-        writer.writeheader()
-        for r in results:
-            writer.writerow({k: r[k] for k in summary_keys})
-
-    print(f"Saved detailed results to {save_dir / f'benchmark-{timestamp}.json'}")
-    print(f"Saved summary table to {csv_path}")
     _print_table(results)
     return results
