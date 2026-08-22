@@ -7,3 +7,9 @@ runs/
 .ragas_cache/
 deploy/cloud-run.env.yaml
 .pytest_cache/
+
+# PDFs you drop into data/documents/ for local ingestion are often
+# copyrighted (papers, manuals, etc.) — fine to use locally, not fine to
+# publish into a public repo. The .txt documents we write ourselves stay
+# tracked; PDFs don't.
+data/documents/*.pdf

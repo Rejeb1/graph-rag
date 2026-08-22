@@ -62,7 +62,7 @@ def main() -> None:
 
     if total_chunks > CHUNK_COUNT_WARNING_THRESHOLD:
         print(
-            f"\nWarning: {total_chunks} chunks is a lot of extraction calls — "
+            f"\nWarning: {total_chunks} chunks is a lot of extraction calls - "
             "Groq's free tier caps total tokens per day as well as per minute; "
             "a run this size can hit that cap partway through."
         )
