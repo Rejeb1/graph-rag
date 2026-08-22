@@ -1,10 +1,12 @@
 """Ragas-based evaluation: faithfulness and context precision.
 
-Uses Groq (via litellm, free) as the evaluator LLM. Both metrics are pure
-LLM-judgment metrics — no embeddings needed. (answer_relevancy was dropped:
-it requires both an `embed_query()` method our embeddings wrapper doesn't
-expose and 3 generations per call, which Groq/litellm only returns 1 of —
-neither is a transient issue, it's a real incompatibility with this setup.)
+Uses Groq's small model (via litellm, free) as the evaluator LLM — see the
+comment in run_ragas() for why small rather than large. Both metrics are
+pure LLM-judgment metrics — no embeddings needed. (answer_relevancy was
+dropped: it requires both an `embed_query()` method our embeddings wrapper
+doesn't expose and 3 generations per call, which Groq/litellm only returns
+1 of — neither is a transient issue, it's a real incompatibility with this
+setup.)
 """
 
 import sys
@@ -35,7 +37,7 @@ from ragas.run_config import RunConfig
 # against ragas 0.4.3's evaluate(); re-check on upgrade.
 from ragas.metrics import context_precision, faithfulness
 
-from src.config import LARGE_MODEL
+from src.config import SMALL_MODEL
 
 
 def build_dataset(records: list[dict]) -> EvaluationDataset:
@@ -62,7 +64,13 @@ def run_ragas(records: list[dict]) -> dict:
     # RunConfig below, which Ragas's own tenacity-based retry decorator
     # wraps around *every* internal call path, instructor included.
     evaluator_llm = llm_factory(
-        f"groq/{LARGE_MODEL}",
+        # SMALL_MODEL, not LARGE_MODEL: Groq's daily token budget is tracked
+        # per model, and the large model's has been repeatedly exhausted by
+        # this benchmark's own volume of verification calls. The small
+        # model's daily budget is separate and untouched. This only affects
+        # the Ragas evaluator — the app's real generation/judge calls still
+        # use LARGE_MODEL, unchanged.
+        f"groq/{SMALL_MODEL}",
         provider="litellm",
         client=litellm.completion,
         max_tokens=4096,  # default was too small, truncating verification output mid-generation (IncompleteOutputException)
