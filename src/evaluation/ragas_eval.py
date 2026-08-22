@@ -7,7 +7,6 @@ expose and 3 generations per call, which Groq/litellm only returns 1 of —
 neither is a transient issue, it's a real incompatibility with this setup.)
 """
 
-import functools
 import sys
 import types
 
@@ -55,21 +54,35 @@ def build_dataset(records: list[dict]) -> EvaluationDataset:
 
 def run_ragas(records: list[dict]) -> dict:
     dataset = build_dataset(records)
-    # Ragas decomposes each question into several verification sub-calls,
-    # which can burst past Groq's free-tier tokens-per-minute limit.
-    # num_retries makes litellm wait out the "try again in Xs" window
-    # instead of giving up after one attempt.
-    groq_completion = functools.partial(litellm.completion, num_retries=5)
-    evaluator_llm = llm_factory(f"groq/{LARGE_MODEL}", provider="litellm", client=groq_completion)
+    # Route through plain litellm.completion — a prior attempt wrapped this
+    # in a custom retry function to work around litellm's own num_retries
+    # not engaging, but that only covers calls Ragas makes directly; some of
+    # its internal calls go through `instructor` instead, bypassing any
+    # wrapper passed as `client`. The actually-effective retry axis is
+    # RunConfig below, which Ragas's own tenacity-based retry decorator
+    # wraps around *every* internal call path, instructor included.
+    evaluator_llm = llm_factory(
+        f"groq/{LARGE_MODEL}",
+        provider="litellm",
+        client=litellm.completion,
+        max_tokens=4096,  # default was too small, truncating verification output mid-generation (IncompleteOutputException)
+    )
 
     result = evaluate(
         dataset=dataset,
         metrics=[faithfulness, context_precision],
         llm=evaluator_llm,
-        # Ragas defaults to 16 concurrent workers, which bursts well past
-        # Groq's free-tier tokens-per-minute limit before num_retries above
-        # gets a chance to help. Low concurrency keeps token usage spread
-        # out enough to stay under the cap.
-        run_config=RunConfig(max_workers=2),
+        run_config=RunConfig(
+            # Ragas defaults to 16 concurrent workers, which bursts well
+            # past Groq's free-tier tokens-per-minute limit before retries
+            # get a chance to help. Low concurrency keeps usage spread out.
+            max_workers=2,
+            # Groq's error messages have asked for waits up to ~20s; the
+            # 180s default total-job timeout doesn't leave room for several
+            # such backoffs within one job before giving up.
+            timeout=900,
+            max_retries=8,
+            max_wait=60,
+        ),
     )
     return result.to_pandas().mean(numeric_only=True).to_dict()

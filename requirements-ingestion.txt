@@ -1,0 +1,5 @@
+# Optional ingestion-time dependency — NOT installed by the Dockerfile.
+# Only scripts/build_index.py needs this (for PDF documents in
+# data/documents/); the deployed API never reads from data/documents/ at
+# all, it only queries the already-populated Neo4j/Qdrant.
+pypdf>=5.0

@@ -47,9 +47,17 @@ python -m venv .venv && source .venv/Scripts/activate  # or .venv/bin/activate o
 pip install -r requirements.txt
 pip install -r requirements-dev.txt   # for running tests
 
-python scripts/build_index.py         # ingest data/documents/*.txt
+python scripts/build_index.py         # ingest data/documents/*.txt and *.pdf
 uvicorn src.api.main:app --reload     # http://localhost:8000/docs
 ```
+
+`build_index.py` also reads PDFs (needs `pip install -r requirements-ingestion.txt`
+for `pypdf` — kept out of the main requirements/Docker image since it's only
+used by this local script, never by the deployed API). Run
+`python scripts/build_index.py --dry-run` first on a new document set — it
+prints the file/chunk counts (one Groq extraction call per chunk) without
+spending any tokens, so you can gauge cost before a large or many-page
+document eats into the free-tier daily budget.
 
 Credentials (all free, no card required):
 - **Groq**: [console.groq.com](https://console.groq.com)
